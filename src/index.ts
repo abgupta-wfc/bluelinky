@@ -1,23 +1,27 @@
 import { AmericanBlueLinkyConfig, AmericanController } from './controllers/american.controller';
-import { EuropeanController, EuropeBlueLinkyConfig } from './controllers/european.controller';
 import { CanadianBlueLinkyConfig, CanadianController } from './controllers/canadian.controller';
-import { ChineseBlueLinkConfig, ChineseController} from './controllers/chinese.controller';
-import { EventEmitter } from 'events';
-import logger from './logger';
-import { Session } from './interfaces/common.interfaces';
-import { REGIONS } from './constants';
+import { ChineseBlueLinkConfig, ChineseController } from './controllers/chinese.controller';
+import { EuropeBlueLinkyConfig, EuropeanController } from './controllers/european.controller';
+import { IndiaBlueLinkyConfig, IndianController } from './controllers/indian.controller';
+
 import AmericanVehicle from './vehicles/american.vehicle';
-import EuropeanVehicle from './vehicles/european.vehicle';
 import CanadianVehicle from './vehicles/canadian.vehicle';
 import ChineseVehicle from './vehicles/chinese.vehicle';
+import EuropeanVehicle from './vehicles/european.vehicle';
+import { EventEmitter } from 'events';
+import IndianVehicle from './vehicles/indian.vehicle';
+import { REGIONS } from './constants';
+import { Session } from './interfaces/common.interfaces';
 import { SessionController } from './controllers/controller';
 import { Vehicle } from './vehicles/vehicle';
+import logger from './logger';
 
 type BluelinkyConfigRegions =
   | AmericanBlueLinkyConfig
   | CanadianBlueLinkyConfig
   | EuropeBlueLinkyConfig
-  | ChineseBlueLinkConfig;
+  | ChineseBlueLinkConfig
+  | IndiaBlueLinkyConfig;
 
 const DEFAULT_CONFIG = {
   username: '',
@@ -33,13 +37,16 @@ const DEFAULT_CONFIG = {
 class BlueLinky<
   T extends BluelinkyConfigRegions = AmericanBlueLinkyConfig,
   REGION = T['region'],
-  VEHICLE_TYPE extends Vehicle = REGION extends REGIONS.US
+  VEHICLE_TYPE extends Vehicle = 
+      REGION extends REGIONS.US
     ? AmericanVehicle
     : REGION extends REGIONS.CA
     ? CanadianVehicle
     : REGION extends REGIONS.CN
     ? ChineseVehicle
-    : EuropeanVehicle
+    : REGION extends REGIONS.EU
+    ? EuropeanVehicle
+    : IndianVehicle
     
 > extends EventEmitter {
   private controller: SessionController;
@@ -68,6 +75,9 @@ class BlueLinky<
         break;
       case REGIONS.CN:
         this.controller = new ChineseController(this.config as ChineseBlueLinkConfig);
+        break;
+      case REGIONS.IN:
+        this.controller = new IndianController(this.config as IndiaBlueLinkyConfig);
         break;
       default:
         throw new Error('Your region is not supported yet.');

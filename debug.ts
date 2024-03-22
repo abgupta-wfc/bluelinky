@@ -1,10 +1,10 @@
 /* eslint-disable */
 // TODO: add all calls from EU and CA
 
-import config from './config.json';
 import BlueLinky from './src';
-import inquirer from 'inquirer';
 import { Vehicle } from './src/vehicles/vehicle';
+import config from './config.json';
+import inquirer from 'inquirer';
 
 const apiCalls = [
   { name: 'exit', value: 'exit' },
@@ -45,7 +45,7 @@ const askForRegionInput = () => {
         type: 'list',
         name: 'region',
         message: 'What Region are you in?',
-        choices: ['CN','US', 'EU', 'CA'],
+        choices: ['IN', 'CN','US', 'EU', 'CA'],
       },
       {
         type: 'list',
