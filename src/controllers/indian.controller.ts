@@ -11,8 +11,9 @@ import { Stringifiable, asyncMap, manageBluelinkyError, uuidV4 } from '../tools/
 import got, { GotInstance, GotJSONFn } from 'got';
 
 import { CookieJar } from 'tough-cookie';
-import { IndianLegacyAuthStrategy } from './authStrategies/indian.strategy';
+import { IndianAuthStrategy } from './authStrategies/indian.strategy';
 import IndianVehicle from '../vehicles/indian.vehicle';
+import { LocalStorage } from 'node-localstorage';
 import { SessionController } from './controller';
 import { URLSearchParams } from 'url';
 import { Vehicle } from '../vehicles/vehicle';
@@ -37,7 +38,6 @@ interface IndianVehicleDescription {
   regDate: string;
   vehicleId: string;
 }
-
 export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
   private _environment: IndianBrandEnvironment;
   private authStrategies: {
@@ -53,10 +53,9 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
         )} are.`
       );
     }
-    this.session.deviceId = uuidV4();
     this._environment = getBrandEnvironment(userConfig);
     this.authStrategies = {
-      main: new IndianLegacyAuthStrategy(this._environment, this.userConfig.language),
+      main: new IndianAuthStrategy(this._environment, this.userConfig.language),
     };
     logger.debug('IN Controller created');
   }
@@ -65,13 +64,15 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
     return this._environment;
   }
 
+  private localStorage = new LocalStorage('./scratch');
+
   public session: Session = {
-    accessToken: undefined,
-    refreshToken: undefined,
-    controlToken: undefined,
-    deviceId: uuidV4(),
-    tokenExpiresAt: 0,
-    controlTokenExpiresAt: 0,
+    accessToken: this.localStorage.getItem('accessToken') ?? undefined,
+    refreshToken: this.localStorage.getItem('refreshToken') ?? undefined,
+    controlToken: this.localStorage.getItem('controlToken') ?? undefined,
+    deviceId: this.localStorage.getItem('deviceId') ?? uuidV4(),
+    tokenExpiresAt: this.localStorage.getItem('tokenExpiresAt') ?? 0,
+    controlTokenExpiresAt: this.localStorage.getItem('controlTokenExpiresAt') ?? 0,
   };
 
   private vehicles: Array<IndianVehicle> = [];
@@ -117,6 +118,9 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
       const responseBody = JSON.parse(response.body);
       this.session.accessToken = 'Bearer ' + responseBody.access_token;
       this.session.tokenExpiresAt = Math.floor(Date.now() / 1000 + responseBody.expires_in);
+
+      this.localStorage.setItem('accessToken', this.session.accessToken);
+      this.localStorage.setItem('tokenExpiresAt', this.session.tokenExpiresAt);
     } catch (err) {
       throw manageBluelinkyError(err, 'IndiaController.refreshAccessToken');
     }
@@ -148,6 +152,8 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
       this.session.controlTokenExpiresAt = Math.floor(
         Date.now() / 1000 + response.body.expiresTime
       );
+      this.localStorage.setItem('controlToken', this.session.controlToken);
+      this.localStorage.setItem('controlTokenExpiresAt', this.session.controlTokenExpiresAt);
       return 'PIN entered OK, The pin is valid for 10 minutes';
     } catch (err) {
       throw manageBluelinkyError(err, 'IndiaController.pin');
@@ -155,6 +161,14 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
   }
 
   public async login(): Promise<string> {
+    if(this.session.accessToken &&
+      this.session.refreshToken &&
+      this.session.tokenExpiresAt &&
+      this.session.deviceId) {
+      logger.debug('Already logged in');
+      return 'Already logged in';
+    }
+    this.session.deviceId = uuidV4();
     try {
       if (!this.userConfig.password || !this.userConfig.username) {
         throw new Error('@IndiaController.login: username and password must be defined.');
@@ -179,8 +193,9 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
         throw("@IndiaController.login: failed");
       }
       logger.debug('@IndiaController.login: Authenticated properly with user and password');
+      
       const genRanHex = size => [...Array(size)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-      const notificationReponse = await got(
+      const notificationResponse = await got(
         `${this.environment.baseUrl}/api/v1/spa/notifications/register`,
         {
           method: 'POST',
@@ -190,8 +205,8 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
             'Host': this.environment.host,
             'Connection': 'Keep-Alive',
             'Accept-Encoding': 'gzip',
-            'User-Agent': 'okhttp/3.10.0',
             'ccsp-application-id': this.environment.appId,
+            'User-Agent': 'IND_BlueLink/2.0.9 (com.hyundai.bluelink.in; build:10105; iOS 16.3.1) Alamofire/5.4.4',
           },
           body: {
             pushRegId: genRanHex(64),
@@ -201,9 +216,10 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
           json: true,
         }
       );
-
-      if (notificationReponse) {
-        this.session.deviceId = notificationReponse.body.resMsg.deviceId;
+      
+      if (notificationResponse) {
+        this.session.deviceId = notificationResponse.body.resMsg.deviceId;
+        this.localStorage.setItem('deviceId', this.session.deviceId);
       }
       logger.debug('@IndiaController.login: Device registered');
 
@@ -237,6 +253,10 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
         this.session.accessToken = `Bearer ${responseBody.access_token}`;
         this.session.refreshToken = responseBody.refresh_token;
         this.session.tokenExpiresAt = Math.floor(Date.now() / 1000 + responseBody.expires_in);
+
+        this.localStorage.setItem('accessToken', this.session.accessToken);
+        this.localStorage.setItem('refreshToken', this.session.refreshToken);
+        this.localStorage.setItem('tokenExpiresAt', this.session.tokenExpiresAt);
       }
       logger.debug('@IndiaController.login: Session defined properly');
 
@@ -247,6 +267,7 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
   }
 
   public async logout(): Promise<string> {
+    this.localStorage.clear();
     return 'OK';
   }
 
@@ -267,7 +288,7 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
       this.vehicles = await asyncMap<IndianVehicleDescription, IndianVehicle>(
         response.body.resMsg.vehicles,
         async v => {
-          const vehicleProfileReponse = await got(
+          const vehicleProfileResponse = await got(
             `${this.environment.baseUrl}/api/v1/spa/vehicles/${v.vehicleId}/profile`,
             {
               method: 'GET',
@@ -278,7 +299,7 @@ export class IndianController extends SessionController<IndiaBlueLinkyConfig> {
             }
           );
 
-          const vehicleProfile = vehicleProfileReponse.body.resMsg;
+          const vehicleProfile = vehicleProfileResponse.body.resMsg;
 
           const vehicleConfig = {
             nickname: v.nickname,

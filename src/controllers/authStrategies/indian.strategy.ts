@@ -5,7 +5,7 @@ import { CookieJar } from 'tough-cookie';
 import Url from 'url';
 import got from 'got';
 
-export class IndianLegacyAuthStrategy implements AuthStrategy {
+export class IndianAuthStrategy implements AuthStrategy {
   constructor(
     private readonly environment: IndianBrandEnvironment,
     private readonly language: INLanguages

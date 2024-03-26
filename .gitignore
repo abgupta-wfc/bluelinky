@@ -7,3 +7,4 @@ config*.json
 .vs/
 .vscode/
 coverage/
+scratch/*

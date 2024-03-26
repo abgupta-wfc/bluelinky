@@ -21,6 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "got": "^9.6.0",
+    "node-localstorage": "^3.0.5",
     "push-receiver": "^2.1.1",
     "tough-cookie": "^4.0.0",
     "winston": "^3.3.3"

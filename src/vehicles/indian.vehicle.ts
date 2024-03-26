@@ -63,6 +63,9 @@ export default class IndianVehicle extends Vehicle {
     try {
       const response = this.updateRates(
         await http.post(`/api/v2/spa/vehicles/${this.vehicleConfig.id}/control/temperature`, {
+          headers: {
+            'ccsp-device-id': this.controller.session.deviceId,
+          },
           body: {
             action: 'start',
             hvacType: 0,
@@ -111,6 +114,9 @@ export default class IndianVehicle extends Vehicle {
     try {
       const response = this.updateRates(
         await http.post(`/api/v2/spa/vehicles/${this.vehicleConfig.id}/control/door`, {
+          headers: {
+            'ccsp-device-id': this.controller.session.deviceId,
+          },
           body: {
             action: 'close',
             deviceId: this.controller.session.deviceId,

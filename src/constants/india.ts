@@ -1,5 +1,4 @@
 import { Brand } from '../interfaces/common.interfaces';
-import { IndiaBlueLinkyConfig } from '../controllers/indian.controller';
 
 export type INLanguages =
   | 'cs'
