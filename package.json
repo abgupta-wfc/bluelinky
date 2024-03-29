@@ -1,6 +1,6 @@
 {
-  "name": "abgupta/bluelinky",
-  "version": "8.2.1",
+  "name": "hbluelinky",
+  "version": "1.0.0",
   "description": "An unofficial nodejs API wrapper for Hyundai bluelink",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
