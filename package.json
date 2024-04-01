@@ -1,5 +1,9 @@
 {
   "name": "@abgupta-wfc/hbluelinky",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abgupta-wfc/bluelinky.git"
+  },
   "version": "1.0.0",
   "description": "An unofficial nodejs API wrapper for Hyundai bluelink",
   "main": "dist/index.js",
